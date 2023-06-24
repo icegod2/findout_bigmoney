@@ -9,6 +9,9 @@ from FinMind import plotting
 from random import randint
 from time import sleep
 from datetime import date
+from strategy_trading_money_rank  import Trading_money_rank
+import json
+
 
 
 
@@ -139,19 +142,69 @@ def show_stock_info(stock_id, stock_name):
     plotting.kline(stockdata, filename=plot_fn)
 
 
-def test_callback(stock_id):
+
+def do_trading_money_rank():
+    s = Trading_money_rank()
+    print(s.start_date)
+    print(s.end_date)
     stocklist = pd.read_csv(stocklist_fn)
-    print("test_callback get stock_id:{}".format(stock_id))
-
-    stock = stocklist[(stocklist['有價證券代號'] == stock_id)].head(1)
-
-    if len(stock) > 0:
-        curr_stock_id = stock['有價證券代號'].to_string(index=False)
-        curr_stock_name = stock['有價證券名稱'].to_string(index=False)
+    profit_dic =dict()
+    last_upper_day=0
+    last_down_day=0
+    for index, row in stocklist.head(1).iterrows():
+        curr_stock_id = int(row['有價證券代號'])
+        curr_stock_name = row['有價證券名稱']
         print(curr_stock_id, curr_stock_name)
-        show_stock_info(curr_stock_id, curr_stock_name)
-    else:
-        print('無此股票代號')
+
+        for day_interval in range(5, 6):
+            for upper_day in range(0, day_interval, 2):
+                for down_day in range(day_interval, -1, -2):
+                    if upper_day == last_upper_day and down_day == last_down_day:
+                        continue
+                    s.set_day_interval(day_interval)
+                    s.set_upper_day(upper_day)
+                    s.set_down_day(down_day)
+                    print(day_interval, upper_day, down_day)
+                    j_ret= s.start(curr_stock_id, curr_stock_name) 
+                    print(j_ret)
+                    # content="[{} {} {}] traction:{}, profile:{:.2f}% ".format(s.get_day_interval(), s.get_upper_day(), s.get_down_day(), traction, 100 * profit)
+                    # print(content)
+                    # str_profit = str(round(profit, 0))
+                    # print(str_profit)
+                    # if str_profit in profit_dic:
+                    #     # tmp = []
+                    #     print("get duplicate =〉", str_profit)
+                    #     # tmp.append(str)
+                    #     profit_dic[str_profit].append([content, detail])
+                    # else:
+                    #     profit_dic[str_profit] = [content, detail]
+                    last_upper_day=upper_day
+                    last_down_day=down_day
+
+        # print(max(profit_dic))
+        # print(min(profit_dic))
+        # profit_dic2 = dict(sorted(profit_dic.items(), reverse=True))
+
+        # profit_dic.sort(reverse = True)
+        # print(profit_dic)
+        # cnt = 0
+        # for key in profit_dic2:
+        #     if cnt > 5:
+        #         break
+        #     for e in profit_dic2[key]:
+        #         print(e)
+            # l = profit_dic2[key]
+            # print(key, "=>", l[0])
+            # while not l[1].empty():
+            #     s = l[1].get()
+            #     print(s)
+
+
+
+
+        # print("get profile {:.2f}".format(profite))
+
+
 
 
 
@@ -159,16 +212,17 @@ def main():
     parser = optparse.OptionParser(usage="%prog [-u] [-t]", version="%prog 1.0")
     parser.add_option('-u', dest='type',
                       type='string',
-                      help='update [ list| data]')
+                      help='update [list| data]')
 
     parser.add_option('-s', dest='num',
                       type='int',
-                      help='update [list| data] -s num')
-    
-    parser.add_option('-t', dest='id',
-                      type='int',
-                      help='test stock_id')
+                      help='update [list| data] start from NUM')
 
+
+    parser.add_option('-S', dest='strategy',
+                      type='str',
+                      help='which strategy want to use')
+    
     (options, args) = parser.parse_args()
 
     if options.type != None:
@@ -184,8 +238,10 @@ def main():
             print(parser.usage)
             exit(1)
 
-    if options.id != None:
-        test_callback(options.id)
+
+    if options.strategy != None:
+        if options.strategy == "trading_money_rank":
+            do_trading_money_rank()
 
 
 if __name__ == "__main__":
