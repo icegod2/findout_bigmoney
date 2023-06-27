@@ -12,7 +12,7 @@ class Trading_money_rank:
         self.rank_up_day_cnt = 13 
         self.rank_down_day_cnt = 10 
         self.trading_money_min = 500000000
-        self.training_start_date = "2001-1-01"
+        self.training_start_date = "2015-1-01"
         self.training_end_date = "2022-12-31"
         self.valid_start_date = "2023-1-01"
         self.valid_end_date = "2023-12-31"
@@ -80,11 +80,11 @@ class Trading_money_rank:
         sell_price = 0
         status = 0  # 1: have stock
 
-        for index, row in stock_data.head(1).iterrows():
-            trading_money = row[3]
-            if trading_money < self.trading_money_min:
-                print("return None trading_money=>", trading_money)
-                return None
+        # for index, row in stock_data.head(1).iterrows():
+        #     trading_money = row[3]
+        #     if trading_money < self.trading_money_min:
+        #         print("return None trading_money=>", trading_money)
+        #         return None
 
         # print("idx from {} to {}".format(start_idx, end_idx))
         for index, row in stock_data.iterrows():
@@ -99,7 +99,7 @@ class Trading_money_rank:
             tuple = element.timetuple()
             epoch = time.mktime(tuple)
             if epoch >= start_epoch and epoch <= end_epoch:
-                if len(rank_list) >= self.day_interval:
+                if len(rank_list) > self.day_interval:
                     del rank_list[0]
                     rank_list.append(trading_money_rank)
                     up_order = 0
@@ -133,7 +133,6 @@ class Trading_money_rank:
                         holding_day = (sell_date_epoch - buy_date_epoch) / 86400
 
 
-                        str="{} buy at price:{}, {} sell at price {}, final_money:{:.2f}, profile:{:.2f}% ( {} days )\n".format(buy_date, buy_price, sell_date, sell_price, final_money, 100 * profit, holding_day)
                         obj = {
                             "buy_date":buy_date,
                             "buy_price":buy_price,

@@ -16,6 +16,7 @@ import itertools
 
 
 stocklist_fn = "stocklist.csv"
+log_fn = "report.log"
 save_data_folder = "./db/"
 data_fn_fmt = "{}{}_{}"
 
@@ -151,19 +152,21 @@ def do_trading_money_rank_strategy():
     strategy_dict = dict()
     last_rank_up_day_cnt=0
     last_rank_down_day_cnt=0
-    for index, row in stocklist.head(30).iterrows():
+    file = open(log_fn, "w+")
+    for index, row in stocklist.head(3).iterrows():
         curr_stock_id = int(row['有價證券代號'])
         curr_stock_name = row['有價證券名稱']
         do_stop = 0
         return_rate_dic = dict()
         print(curr_stock_id, curr_stock_name)
+        
 
         for day_interval in range(5, 10):
             if do_stop == 1:
-                break;
+                break
             for rank_up_day_cnt in range(0, day_interval, 1):
                 if do_stop == 1:
-                    break;
+                    break
                 for rank_down_day_cnt in range(day_interval, -1, -1):
                     if rank_up_day_cnt == last_rank_up_day_cnt and rank_down_day_cnt == last_rank_down_day_cnt:
                         continue
@@ -173,7 +176,7 @@ def do_trading_money_rank_strategy():
                     j_ret= s.train(curr_stock_id, curr_stock_name) 
                     if j_ret == None:
                         do_stop = 1
-                        continue;
+                        break
                     j_ret=json.loads(j_ret)
 
                     s_return_rate = str(round(j_ret['return_rate'], 2))
@@ -191,6 +194,8 @@ def do_trading_money_rank_strategy():
         if do_stop == 0:
             print("max return: {}%".format(100 * float(max(return_rate_dic))))
             print("min return: {}%".format(100 * float(min(return_rate_dic))))
+            file.write("{} {}\n".format(curr_stock_id, curr_stock_name))
+            file.write("max return: {:.2f}%, min {:.2f}%\n".format(100 * float(max(return_rate_dic)), 100 * float(min(return_rate_dic))))
             # print("min return: {}%".format(100 * min(return_rate_dic)))
             return_rate_dic = dict(sorted(return_rate_dic.items(), reverse=True))
             return_rate_dic = dict(itertools.islice(return_rate_dic.items(), 1,6))
@@ -204,8 +209,11 @@ def do_trading_money_rank_strategy():
                     else:
                         strategy_dict[s_key] = 1
                     print("[{} {} {}] tranctions:{}, return_rate:{:.2f}%".format(j_ret['day_interval'], j_ret['rank_up_day_cnt'], j_ret['rank_down_day_cnt'], j_ret['traction_num'], 100 * j_ret['return_rate']))
-
+                    file.write("[{} {} {}] tranctions:{}, return_rate:{:.2f}%\n".format(j_ret['day_interval'], j_ret['rank_up_day_cnt'], j_ret['rank_down_day_cnt'], j_ret['traction_num'], 100 * j_ret['return_rate']))
+    
     print(strategy_dict)
+    file.write("Strategy option: {}\n\n".format(strategy_dict))
+    file.close()
 
 
 
