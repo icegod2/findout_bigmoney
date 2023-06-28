@@ -100,12 +100,10 @@ class Trading_money_rank:
             epoch = time.mktime(tuple)
             if epoch >= start_epoch and epoch <= end_epoch:
                 if len(rank_list) > self.day_interval:
-                    del rank_list[0]
-                    rank_list.append(trading_money_rank)
                     up_order = 0
                     down_order = 0
                     criteria=rank_list[0]
-                    for i in range(len(rank_list)):
+                    for i in range(1, len(rank_list)):
                         if rank_list[i] < criteria:
                             up_order += 1
                         else:
@@ -144,6 +142,9 @@ class Trading_money_rank:
                         }
                         detail_list.append(obj)
                         status = 0
+
+                    del rank_list[0]
+                    rank_list.append(trading_money_rank)
                 else:
                     rank_list.append(trading_money_rank)
 

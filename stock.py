@@ -153,7 +153,7 @@ def do_trading_money_rank_strategy():
     last_rank_up_day_cnt=0
     last_rank_down_day_cnt=0
     file = open(log_fn, "w+")
-    for index, row in stocklist.head(3).iterrows():
+    for index, row in stocklist.head(20).iterrows():
         curr_stock_id = int(row['有價證券代號'])
         curr_stock_name = row['有價證券名稱']
         do_stop = 0
