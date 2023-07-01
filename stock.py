@@ -12,6 +12,8 @@ from datetime import date
 from strategy_trading_money_rank  import Trading_money_rank
 import json
 import itertools
+import datetime
+import time
 
 
 
@@ -99,6 +101,16 @@ def update_stock_data(start=1):
             get_stock_info(curr_stock_id, curr_stock_name)
             sleep(randint(2, 5))
 
+def update_one_stock_data(stock_id, start_date_from):
+    stocklist = pd.read_csv(stocklist_fn)
+    stock = stocklist[(stocklist['有價證券代號'] == stock_id)].head(1)
+    for index, row in stock.iterrows():
+        curr_stock_id = int(row['有價證券代號'])
+        curr_stock_name = row['有價證券名稱']
+        if curr_stock_id == stock_id:
+            get_one_stock_info(curr_stock_id, curr_stock_name, start_date_from)
+
+
 def get_last_udpate_day(stock_id, stock_name):
     fn = data_fn_fmt.format(save_data_folder, stock_id, stock_name)
     print(fn)
@@ -108,6 +120,47 @@ def get_last_udpate_day(stock_id, stock_name):
         if type(d) == str:
             return x, d
     return None
+
+
+def get_one_stock_info(stock_id, stock_name, start_date):
+    if not os.path.exists(save_data_folder):
+        os.mkdir(save_data_folder)
+        print("Directory '% s' created" % save_data_folder)
+
+    dl = DataLoader()
+    today = date.today()
+    new_data = dl.taiwan_stock_daily(
+        stock_id=stock_id, start_date=start_date, end_date=today)
+    new_data['Trading_money_rank'] = -1
+    row, col = new_data.shape
+
+    element = datetime.datetime.strptime(start_date,"%Y-%m-%d")
+    tuple = element.timetuple()
+    start_epoch = time.mktime(tuple)
+
+    if row > 3:
+        fn = data_fn_fmt.format(save_data_folder, stock_id, stock_name)
+        fn_tmp = fn + ".tmp"
+        stock_data = pd.read_csv(fn)
+        for index, row in stock_data.iterrows():
+            check_date = row[0]
+            element = datetime.datetime.strptime(check_date,"%Y-%m-%d")
+            tuple = element.timetuple()
+            row_epoch = time.mktime(tuple)
+            if (start_epoch <= row_epoch):
+                break
+        print("index => ", index)
+        print("row => ", row)
+
+        m = pd.concat([stock_data.iloc[:index],new_data],ignore_index=1)
+        m.to_csv(fn_tmp, sep=',', index=False, encoding='utf-8')
+        shutil.copy(fn_tmp, fn)
+        os.remove(fn_tmp)
+
+    print(stock_id, stock_name, start_date)
+
+
+
 
 def get_stock_info(stock_id, stock_name):
     if not os.path.exists(save_data_folder):
@@ -150,10 +203,8 @@ def do_trading_money_rank_strategy():
     print(s.training_end_date)
     stocklist = pd.read_csv(stocklist_fn)
     strategy_dict = dict()
-    last_rank_up_day_cnt=0
-    last_rank_down_day_cnt=0
     file = open(log_fn, "w+")
-    for index, row in stocklist.head(20).iterrows():
+    for index, row in stocklist.head(3).iterrows():
         curr_stock_id = int(row['有價證券代號'])
         curr_stock_name = row['有價證券名稱']
         do_stop = 0
@@ -161,74 +212,100 @@ def do_trading_money_rank_strategy():
         print(curr_stock_id, curr_stock_name)
         
 
-        for day_interval in range(5, 10):
-            if do_stop == 1:
-                break
-            for rank_up_day_cnt in range(0, day_interval, 1):
-                if do_stop == 1:
+        for cumulative_rank_up_day in range(2, 10):
+            for selldout_days_after_buy in range(10, 90, 10):
+                # print("================= cumulative_rank_up_day => ", cumulative_rank_up_day)
+                # print("================== selldout_days_after_buy => ", selldout_days_after_buy)
+                s.set_cumulative_rank_up_day(cumulative_rank_up_day)
+                s.set_selldout_days_after_buy(selldout_days_after_buy)
+                j_ret= s.train(curr_stock_id, curr_stock_name) 
+                if j_ret == None:
+                    do_stop = 1
                     break
-                for rank_down_day_cnt in range(day_interval, -1, -1):
-                    if rank_up_day_cnt == last_rank_up_day_cnt and rank_down_day_cnt == last_rank_down_day_cnt:
-                        continue
-                    s.set_day_interval(day_interval)
-                    s.set_rank_up_day_cnt(rank_up_day_cnt)
-                    s.set_rank_down_day_cnt(rank_down_day_cnt)
-                    j_ret= s.train(curr_stock_id, curr_stock_name) 
-                    if j_ret == None:
-                        do_stop = 1
-                        break
-                    j_ret=json.loads(j_ret)
+                j_ret=json.loads(j_ret)
+                # print(j_ret)
 
-                    s_return_rate = str(round(j_ret['return_rate'], 2))
+                r = round(j_ret['return_rate'], 3)
+                if r > 1.01:
+                    s_return_rate = str(r)
                     if s_return_rate in return_rate_dic:
-                        # tmp = []
-                        # print("get duplicate =〉", s_return_rate)
-                        # tmp.append(str)
+                        print("get duplicate =〉", s_return_rate)
                         return_rate_dic[s_return_rate].append(j_ret)
                     else:
                         return_rate_dic[s_return_rate] = [j_ret]
-                    last_rank_up_day_cnt=rank_up_day_cnt
-                    last_rank_down_day_cnt=rank_down_day_cnt
 
+        # print("return_rate_dic => ", return_rate_dic)
 
         if do_stop == 0:
-            print("max return: {}%".format(100 * float(max(return_rate_dic))))
-            print("min return: {}%".format(100 * float(min(return_rate_dic))))
-            file.write("{} {}\n".format(curr_stock_id, curr_stock_name))
-            file.write("max return: {:.2f}%, min {:.2f}%\n".format(100 * float(max(return_rate_dic)), 100 * float(min(return_rate_dic))))
-            # print("min return: {}%".format(100 * min(return_rate_dic)))
-            return_rate_dic = dict(sorted(return_rate_dic.items(), reverse=True))
-            return_rate_dic = dict(itertools.islice(return_rate_dic.items(), 1,6))
+            if len(return_rate_dic) > 0:
+                if float(max(return_rate_dic)) > 1:
+                    print("max return: {:.2f}%".format(100 * float(max(return_rate_dic)) - 100))
+                else:
+                    print("max return: -{:.2f}%".format(100 - 100 * float(max(return_rate_dic))))
 
+                if float(min(return_rate_dic)) > 1:
+                    print("min return: {:.2f}%".format(100 * float(min(return_rate_dic)) - 100))
+                else:
+                    print("min return: -{:.2f}%".format(100 - 100 * float(min(return_rate_dic))))
 
-            for key in return_rate_dic:
-                for j_ret in return_rate_dic[key]:
-                    s_key = "{}_{}_{}".format(j_ret['day_interval'], j_ret['rank_up_day_cnt'], j_ret['rank_down_day_cnt'])
-                    if strategy_dict.get(s_key):
-                        strategy_dict[s_key] += 1
-                    else:
-                        strategy_dict[s_key] = 1
-                    print("[{} {} {}] tranctions:{}, return_rate:{:.2f}%".format(j_ret['day_interval'], j_ret['rank_up_day_cnt'], j_ret['rank_down_day_cnt'], j_ret['traction_num'], 100 * j_ret['return_rate']))
-                    file.write("[{} {} {}] tranctions:{}, return_rate:{:.2f}%\n".format(j_ret['day_interval'], j_ret['rank_up_day_cnt'], j_ret['rank_down_day_cnt'], j_ret['traction_num'], 100 * j_ret['return_rate']))
-    
+                file.write("{} {}\n".format(curr_stock_id, curr_stock_name))
+                file.write("max return: {:.2f}%, min {:.2f}%\n".format(100 * float(max(return_rate_dic)), 100 * float(min(return_rate_dic))))
+                # print("min return: {}%".format(100 * min(return_rate_dic)))
+                return_rate_dic = dict(sorted(return_rate_dic.items(), reverse=True))
+
+                max_record_need = 10
+                return_rate_dic = dict(itertools.islice(return_rate_dic.items(), 0,max_record_need))
+
+                # print("2:return_rate_dic => ", return_rate_dic)
+
+                # cnt = max_record_need
+                for key in return_rate_dic:
+                    for j_ret in return_rate_dic[key]:
+                        s_key = "{}_{}".format(j_ret['cumulative_rank_up_day'], j_ret['selldout_days_after_buy'])
+                        if strategy_dict.get(s_key):
+                            strategy_dict[s_key] += 1
+                        else:
+                            strategy_dict[s_key] = 1
+
+                        if j_ret['return_rate'] > 1:
+                            print("[{} {}] return_rate: +{:.2f}%".format(j_ret['cumulative_rank_up_day'], j_ret['selldout_days_after_buy'], 100 * j_ret['return_rate'] - 100))
+                            file.write("[{} {}] return_rate: +{:.2f}%\n".format(j_ret['cumulative_rank_up_day'], j_ret['selldout_days_after_buy'], 100 * j_ret['return_rate'] - 100))
+                        else:
+                            print("[{} {}] return_rate: -{:.2f}%".format(j_ret['cumulative_rank_up_day'], j_ret['selldout_days_after_buy'], 100 - 100 * j_ret['return_rate']))
+                            file.write("[{} {}] return_rate: -{:.2f}%\n".format(j_ret['cumulative_rank_up_day'], j_ret['selldout_days_after_buy'], 100 - 100 * j_ret['return_rate']))
+                    # cnt -= 1
+
     print(strategy_dict)
+    strategy_dict = dict(sorted(strategy_dict.items(), key=lambda item: item[1], reverse=True))
+    print(strategy_dict)
+    strategy_dict = dict(itertools.islice(strategy_dict.items(), 10))
+    print(strategy_dict)
+
+    # for key in strategy_dict:
+        # print("{}:{}".format(strategy_dict[key], key))
     file.write("Strategy option: {}\n\n".format(strategy_dict))
     file.close()
 
 
 
 
-
 def main():
     parser = optparse.OptionParser(usage="%prog [-u] [-t]", version="%prog 1.0")
-    parser.add_option('-u', dest='type',
+    parser.add_option('--update', dest='type',
                       type='string',
                       help='update [list| data]')
 
-    parser.add_option('-s', dest='num',
+    parser.add_option('--start_id', dest='start_stock_id',
                       type='int',
-                      help='update [list| data] start from NUM')
+                      help='update data start from stock_id')
 
+    parser.add_option('--target_id', dest='target_stock_id',
+                      type='int',
+                      help='update data target stock_id')
+
+    parser.add_option('--start_date', dest='from_target_date',
+                      type='string',
+                      help='update data target stock_id from date (e.g. 2022-07-21)')
 
     parser.add_option('-S', dest='strategy',
                       type='str',
@@ -240,11 +317,13 @@ def main():
         if options.type == "list":
             update_stock_list()
         elif options.type == "data":
-            if options.num != None:
-                update_stock_data(options.num)
+            if options.start_stock_id != None: 
+                update_stock_data(options.start_stock_id)
+            elif options.target_stock_id != None: 
+                update_one_stock_data(options.target_stock_id, options.from_target_date)
             else:
                 update_stock_data()
-            update_trading_money_rank()
+            # update_trading_money_rank()
         else:
             print(parser.usage)
             exit(1)
@@ -254,6 +333,13 @@ def main():
         if options.strategy == "trading_money_rank":
             do_trading_money_rank_strategy()
 
+
+    test_dict = {'3_40': 1, '3_50': 3, '3_30': 5, '3_20': 1, '4_40': 10, '3_60': 1, '3_70': 1, '3_80': 1}
+    print(test_dict)
+    test_dict = dict(sorted(test_dict.items(), key=lambda item: item[1], reverse=True))
+    print(test_dict)
+    test_dict = dict(itertools.islice(test_dict.items(), 5))
+    print(test_dict)
 
 if __name__ == "__main__":
     main()
