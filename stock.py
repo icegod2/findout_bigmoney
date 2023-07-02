@@ -204,26 +204,36 @@ def do_trading_money_rank_strategy():
     stocklist = pd.read_csv(stocklist_fn)
     strategy_dict = dict()
     file = open(log_fn, "w+")
-    for index, row in stocklist.head(3).iterrows():
+    for index, row in stocklist.iterrows():
         curr_stock_id = int(row['有價證券代號'])
         curr_stock_name = row['有價證券名稱']
+        # if curr_stock_id != 8454:
+        #     continue
         do_stop = 0
         return_rate_dic = dict()
         print(curr_stock_id, curr_stock_name)
+
+        file.write("{} {}\n".format(curr_stock_id, curr_stock_name))
         
 
         for cumulative_rank_up_day in range(2, 10):
-            for selldout_days_after_buy in range(10, 90, 10):
-                # print("================= cumulative_rank_up_day => ", cumulative_rank_up_day)
-                # print("================== selldout_days_after_buy => ", selldout_days_after_buy)
+            for selldout_days_after_buy in range(10, 61, 10):
+                file.write("[{} {}]================= cumulative_rank_up_day => {}\n".format(curr_stock_id, curr_stock_name, cumulative_rank_up_day))
+                file.write("[{} {}]================= selldout_days_after_buy => {}\n".format(curr_stock_id, curr_stock_name, selldout_days_after_buy))
+                print("[{} {}]================= cumulative_rank_up_day => {}".format(curr_stock_id, curr_stock_name, cumulative_rank_up_day))
+                print("[{} {}]================== selldout_days_after_buy => {}".format(curr_stock_id, curr_stock_name, selldout_days_after_buy))
                 s.set_cumulative_rank_up_day(cumulative_rank_up_day)
                 s.set_selldout_days_after_buy(selldout_days_after_buy)
                 j_ret= s.train(curr_stock_id, curr_stock_name) 
                 if j_ret == None:
-                    do_stop = 1
-                    break
+                    continue
                 j_ret=json.loads(j_ret)
-                # print(j_ret)
+                for m in j_ret['detail']:
+                    file.write("buy at {} at price {}, ".format(m['buy_date'], m['buy_price']))
+                    file.write("Sell at {} at price {}, final money:{}, return {:.2f}%\n".format(m['sell_date'], m['sell_price'], m['final_money'], 100 * (m['sell_price'] - m['buy_price']) / m['buy_price']))
+
+
+                file.write("\n")
 
                 r = round(j_ret['return_rate'], 3)
                 if r > 1.01:
@@ -248,7 +258,7 @@ def do_trading_money_rank_strategy():
                 else:
                     print("min return: -{:.2f}%".format(100 - 100 * float(min(return_rate_dic))))
 
-                file.write("{} {}\n".format(curr_stock_id, curr_stock_name))
+                # file.write("{} {}\n".format(curr_stock_id, curr_stock_name))
                 file.write("max return: {:.2f}%, min {:.2f}%\n".format(100 * float(max(return_rate_dic)), 100 * float(min(return_rate_dic))))
                 # print("min return: {}%".format(100 * min(return_rate_dic)))
                 return_rate_dic = dict(sorted(return_rate_dic.items(), reverse=True))
@@ -258,14 +268,14 @@ def do_trading_money_rank_strategy():
 
                 # print("2:return_rate_dic => ", return_rate_dic)
 
-                # cnt = max_record_need
+                cnt = max_record_need
                 for key in return_rate_dic:
                     for j_ret in return_rate_dic[key]:
                         s_key = "{}_{}".format(j_ret['cumulative_rank_up_day'], j_ret['selldout_days_after_buy'])
                         if strategy_dict.get(s_key):
-                            strategy_dict[s_key] += 1
+                            strategy_dict[s_key] += cnt
                         else:
-                            strategy_dict[s_key] = 1
+                            strategy_dict[s_key] = cnt
 
                         if j_ret['return_rate'] > 1:
                             print("[{} {}] return_rate: +{:.2f}%".format(j_ret['cumulative_rank_up_day'], j_ret['selldout_days_after_buy'], 100 * j_ret['return_rate'] - 100))
@@ -273,17 +283,15 @@ def do_trading_money_rank_strategy():
                         else:
                             print("[{} {}] return_rate: -{:.2f}%".format(j_ret['cumulative_rank_up_day'], j_ret['selldout_days_after_buy'], 100 - 100 * j_ret['return_rate']))
                             file.write("[{} {}] return_rate: -{:.2f}%\n".format(j_ret['cumulative_rank_up_day'], j_ret['selldout_days_after_buy'], 100 - 100 * j_ret['return_rate']))
-                    # cnt -= 1
+                    cnt -= 1
 
-    print(strategy_dict)
+    # print(strategy_dict)
     strategy_dict = dict(sorted(strategy_dict.items(), key=lambda item: item[1], reverse=True))
-    print(strategy_dict)
+    # print(strategy_dict)
     strategy_dict = dict(itertools.islice(strategy_dict.items(), 10))
     print(strategy_dict)
 
-    # for key in strategy_dict:
-        # print("{}:{}".format(strategy_dict[key], key))
-    file.write("Strategy option: {}\n\n".format(strategy_dict))
+    file.write("\nStrategy option: {}\n\n".format(strategy_dict))
     file.close()
 
 
@@ -332,14 +340,9 @@ def main():
     if options.strategy != None:
         if options.strategy == "trading_money_rank":
             do_trading_money_rank_strategy()
-
-
-    test_dict = {'3_40': 1, '3_50': 3, '3_30': 5, '3_20': 1, '4_40': 10, '3_60': 1, '3_70': 1, '3_80': 1}
-    print(test_dict)
-    test_dict = dict(sorted(test_dict.items(), key=lambda item: item[1], reverse=True))
-    print(test_dict)
-    test_dict = dict(itertools.islice(test_dict.items(), 5))
-    print(test_dict)
+            
+            
+    do_trading_money_rank_strategy()
 
 if __name__ == "__main__":
     main()

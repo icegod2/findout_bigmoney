@@ -10,8 +10,8 @@ class Trading_money_rank:
     def __init__(self):
         self.cumulative_rank_up_day = 5 
         self.selldout_days_after_buy = 10
-        self.trading_money_min = 500000000
-        self.training_start_date = "2020-01-01"
+        self.trading_money_min = 1000000000
+        self.training_start_date = "2015-01-01"
         self.training_end_date = "2022-12-31"
         self.valid_start_date = "2023-1-01"
         self.valid_end_date = "2023-12-31"
@@ -69,13 +69,14 @@ class Trading_money_rank:
         buy_date = 0
         sell_date = 0
         sell_price = 0
+        last_sell_epoch = 0
         status = 0  # 1: have stock
 
-        # for index, row in stock_data.head(1).iterrows():
-        #     trading_money = row[3]
-        #     if trading_money < self.trading_money_min:
-        #         print("return None trading_money=>", trading_money)
-        #         return None
+        for index, row in stock_data.head(1).iterrows():
+            trading_money = row[3]
+            if trading_money < self.trading_money_min:
+                # print("return None trading_money=>", trading_money)
+                return None
 
         # print("idx from {} to {}".format(start_idx, end_idx))
         for index, row in stock_data.iterrows():
@@ -90,6 +91,11 @@ class Trading_money_rank:
             tuple = element.timetuple()
             epoch = time.mktime(tuple)
             if epoch >= start_epoch and epoch <= end_epoch:
+                # print("checkdate {}".format(check_date))
+                if epoch <= last_sell_epoch:
+                    # print("epoch {}, last_sell_epoch {}".format(epoch, last_sell_epoch))
+                    continue
+                    
                 if len(rank_list) > self.cumulative_rank_up_day:
                     up_order = 0
                     last_rank = rank_list[0]
@@ -125,6 +131,7 @@ class Trading_money_rank:
                                     # print(rank_list)
                                     profit =(sell_price - buy_price) / buy_price
                                     final_money *= (1 + profit)
+                                    # print("buy at {} at price {}, buy_epoch {}".format(buy_date, buy_price, buy_epoch))
                                     # print("Sell at {} at price {}, final money:{}, return {:.2f}%".format(sell_date, sell_price, final_money, 100 * (sell_price - buy_price) / buy_price))
 
                                     obj = {
@@ -132,14 +139,16 @@ class Trading_money_rank:
                                         "buy_price":buy_price,
                                         "sell_date":sell_date,
                                         "sell_price":sell_price,
-                                        "final_money":final_money,
-                                        "return":(sell_price - buy_price) / buy_price
+                                        "final_money":round(final_money, 0),
+                                        "return":round((sell_price - buy_price) / buy_price, 2)
                                     }
                                     # print("return {:.2f}%".format(100 * (sell_price - buy_price) / buy_price))
                                     detail_list.append(obj)
+                                    last_sell_epoch = sell_epoch
+                                    # print("last_sell_epoch => ", last_sell_epoch)
                                 break
                             elif sell_epoch > sell_epoch_end:
-                                print("buy at {} at price {}, buy_epoch {}".format(buy_date, buy_price, buy_epoch))
+                                # print("buy at {} at price {}, buy_epoch {}".format(buy_date, buy_price, buy_epoch))
                                 print("behind sell_epoch end")
 
                                 break
@@ -150,11 +159,12 @@ class Trading_money_rank:
                 else:
                     rank_list.append(trading_money_rank)
 
+
         x = {
              "cumulative_rank_up_day": self.cumulative_rank_up_day,
              "selldout_days_after_buy": self.selldout_days_after_buy,
-             "return_rate": final_money / init_money
-            #  "detail": detail_list
+             "return_rate": final_money / init_money,
+             "detail": detail_list
             }
         # r = final_money / init_money
         # if r > 1:
