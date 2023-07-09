@@ -1,6 +1,6 @@
 import pandas as pd
 import time
-import datetime
+import datetime as dt
 import queue
 import numpy as np
 import json
@@ -9,6 +9,8 @@ import subprocess
 import errno
 import itertools
 import shutil
+
+
 
 class Trading_money_rank:
     # 建構式rank_up_day_cnt
@@ -245,13 +247,8 @@ class Trading_money_rank:
         start_epoch=0
         end_epoch=0
         detail_list = []
-        element = datetime.datetime.strptime(self.valid_start_date,"%Y-%m-%d")
-        tuple = element.timetuple()
-        start_epoch = time.mktime(tuple)
-        
-        element = datetime.datetime.strptime(self.valid_end_date,"%Y-%m-%d")
-        tuple = element.timetuple()
-        end_epoch = time.mktime(tuple)
+        start_epoch = dt.datetime.strptime(self.valid_start_date,"%Y-%m-%d").timestamp()
+        end_epoch = dt.datetime.strptime(self.valid_end_date,"%Y-%m-%d").timestamp()
 
         rank_list = []
         buy_price = 0
@@ -269,9 +266,7 @@ class Trading_money_rank:
             if close_price == 0:
                 continue
 
-            element = datetime.datetime.strptime(check_date,"%Y-%m-%d")
-            tuple = element.timetuple()
-            epoch = time.mktime(tuple)
+            epoch = dt.datetime.strptime(check_date,"%Y-%m-%d").timestamp()
             if epoch >= start_epoch and epoch <= end_epoch:
                 # print("checkdate {}".format(check_date))
                 if epoch <= last_sell_epoch:
@@ -291,9 +286,7 @@ class Trading_money_rank:
                         buy_price = row[7]
                         buy_date = check_date
 
-                        element = datetime.datetime.strptime(buy_date,"%Y-%m-%d")
-                        tuple = element.timetuple()
-                        buy_epoch = time.mktime(tuple)
+                        buy_epoch = dt.datetime.strptime(buy_date,"%Y-%m-%d").timestamp()
                         sell_epoch_start = buy_epoch + self.selldout_days_after_buy * 86400
                         sell_epoch_end = buy_epoch + (self.selldout_days_after_buy * 3) * 86400
 
@@ -304,9 +297,7 @@ class Trading_money_rank:
                             sell_date = sell_row[0]
                             sell_price = sell_row[7]
                             
-                            element = datetime.datetime.strptime(sell_date,"%Y-%m-%d")
-                            tuple = element.timetuple()
-                            sell_epoch = time.mktime(tuple)
+                            sell_epoch = dt.datetime.strptime(sell_date,"%Y-%m-%d").timestamp()
                             if sell_epoch >= sell_epoch_start and sell_epoch < sell_epoch_end:
                                 if sell_price > 0:
                                     # print("criteria ", criteria)
@@ -363,13 +354,8 @@ class Trading_money_rank:
         final_money = 10000
         detail_list = []
 
-        element = datetime.datetime.strptime(self.collect_data_start_date,"%Y-%m-%d")
-        tuple = element.timetuple()
-        start_epoch = time.mktime(tuple)
-        
-        element = datetime.datetime.strptime(self.collect_data_end_date,"%Y-%m-%d")
-        tuple = element.timetuple()
-        end_epoch = time.mktime(tuple)
+        start_epoch = dt.datetime.strptime(self.collect_data_start_date,"%Y-%m-%d").timestamp()   
+        end_epoch = dt.datetime.strptime(self.collect_data_end_date,"%Y-%m-%d").timestamp()
 
         rank_list = []
         buy_price = 0
@@ -393,9 +379,7 @@ class Trading_money_rank:
             if close_price == 0:
                 continue
 
-            element = datetime.datetime.strptime(check_date,"%Y-%m-%d")
-            tuple = element.timetuple()
-            epoch = time.mktime(tuple)
+            epoch = dt.datetime.strptime(check_date,"%Y-%m-%d").timestamp()
             if epoch >= start_epoch and epoch <= end_epoch:
                 # print("checkdate {}".format(check_date))
                 if epoch <= last_sell_epoch:
@@ -416,9 +400,7 @@ class Trading_money_rank:
                         buy_price = row[7]
                         buy_date = check_date
 
-                        element = datetime.datetime.strptime(buy_date,"%Y-%m-%d")
-                        tuple = element.timetuple()
-                        buy_epoch = time.mktime(tuple)
+                        buy_epoch = dt.datetime.strptime(buy_date,"%Y-%m-%d").timestamp()
                         sell_epoch_start = buy_epoch + self.selldout_days_after_buy * 86400
                         sell_epoch_end = buy_epoch + (self.selldout_days_after_buy * 3) * 86400
 
@@ -429,9 +411,7 @@ class Trading_money_rank:
                             sell_date = sell_row[0]
                             sell_price = sell_row[7]
                             
-                            element = datetime.datetime.strptime(sell_date,"%Y-%m-%d")
-                            tuple = element.timetuple()
-                            sell_epoch = time.mktime(tuple)
+                            sell_epoch = dt.datetime.strptime(sell_date,"%Y-%m-%d").timestamp()
                             if sell_epoch >= sell_epoch_start and sell_epoch < sell_epoch_end:
                                 if sell_price > 0:
                                     # print("criteria ", criteria)

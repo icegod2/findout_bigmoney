@@ -10,11 +10,8 @@ from random import randint
 from time import sleep
 from datetime import date
 from strategy_trading_money_rank  import Trading_money_rank
-import json
-import itertools
-import datetime
+import datetime as dt
 import time
-import subprocess
 
 
 
@@ -135,19 +132,14 @@ def get_one_stock_info(stock_id, stock_name, start_date):
     new_data['Trading_money_rank'] = -1
     row, col = new_data.shape
 
-    element = datetime.datetime.strptime(start_date,"%Y-%m-%d")
-    tuple = element.timetuple()
-    start_epoch = time.mktime(tuple)
-
+    start_epoch = dt.datetime.strptime(start_date,"%Y-%m-%d").timestamp()
     if row > 3:
         fn = data_fn_fmt.format(stock_data_dir, stock_id, stock_name)
         fn_tmp = fn + ".tmp"
         stock_data = pd.read_csv(fn)
         for index, row in stock_data.iterrows():
             check_date = row[0]
-            element = datetime.datetime.strptime(check_date,"%Y-%m-%d")
-            tuple = element.timetuple()
-            row_epoch = time.mktime(tuple)
+            row_epoch = dt.datetime.strptime(check_date,"%Y-%m-%d").timestamp()
             if (start_epoch <= row_epoch):
                 break
         print("index => ", index)
@@ -248,9 +240,9 @@ def main():
     # ret = s.pick_up_stock()
     # print(ret)
     
-            
-            
-    
+
+
+
 
 if __name__ == "__main__":
     main()
