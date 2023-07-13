@@ -236,7 +236,7 @@ def main():
     
     s = Trading_money_rank()
     s.update_data_start()
-    # s.update_buy_criteria()
+    s.update_buy_criteria()
     # ret = s.pick_up_stock()
     # print(ret)
     

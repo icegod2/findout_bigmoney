@@ -26,23 +26,20 @@ class Trading_money_rank:
         self.not_meet_up_order_criteria = 1
         self.data_fn_fmt = "{}{}_{}"
         self.stock_data_dir = "./db/"
-        self.debug_stock_select_num = 3
+        self.debug_stock_select_num = -1
         self.max_record_need_each_stock = 3
         self.stocklist_fn = "./stocklist.csv"
         self.buy_rule_fn = "./buy_rule_by_trading_money_rank_strategy"
         self.data_dir = "./strategy_trading_money_rank_data/"
-        # self.test_case = [  ["2006-01-01", "2016-12-31", "2017-01-01", "2023-06-30"],
-        #                     ["2008-01-01", "2018-12-31", "2019-01-01", "2023-06-30"],
-        #                     ["2010-01-01", "2020-12-31", "2021-01-01", "2023-06-30"],
-        #                     ["2012-01-01", "2021-12-31", "2022-01-01", "2023-06-30"],
-        #                     ["2014-01-01", "2021-12-31", "2022-01-01", "2023-06-30"],
-        #                     ["2016-01-01", "2021-12-31", "2022-01-01", "2023-06-30"],
-        #                     ["2018-01-01", "2021-12-31", "2022-01-01", "2023-06-30"],
-        #                     ["2020-01-01", "2021-12-31", "2022-01-01", "2023-06-30"],
-        #                 ]  
-
-        self.test_case = [  ["2006-01-01", "2016-12-31", "2017-01-01", "2023-06-30"]
-                        ]  
+        self.test_case = [  ["2006-01-01", "2016-12-31", "2017-01-01", "2023-06-30"],
+                            ["2008-01-01", "2018-12-31", "2019-01-01", "2023-06-30"],
+                            ["2010-01-01", "2020-12-31", "2021-01-01", "2023-06-30"],
+                            ["2012-01-01", "2021-12-31", "2022-01-01", "2023-06-30"],
+                            ["2014-01-01", "2021-12-31", "2022-01-01", "2023-06-30"],
+                            ["2016-01-01", "2021-12-31", "2022-01-01", "2023-06-30"],
+                            ["2018-01-01", "2021-12-31", "2022-01-01", "2023-06-30"],
+                            ["2020-01-01", "2021-12-31", "2022-01-01", "2023-06-30"],
+                        ] 
         
     def set_collect_data_start_date(self, day):
         self.collect_data_start_date = day
@@ -193,9 +190,9 @@ class Trading_money_rank:
                 curr_stock_name = row['有價證券名稱']
                 return_rate_dic = dict()
                 print(curr_stock_id, curr_stock_name)
-                for cumulative_rank_up_day in range(2, 3):
+                for cumulative_rank_up_day in range(2, 10):
                     self.not_meet_up_order_criteria = 1
-                    for selldout_days_after_buy in range(10, 31, 10):
+                    for selldout_days_after_buy in range(10, 61, 10):
                         # print("[{} {}]================= cumulative_rank_up_day => {}".format(curr_stock_id, curr_stock_name, cumulative_rank_up_day))
                         # print("[{} {}]================== selldout_days_after_buy => {}".format(curr_stock_id, curr_stock_name, selldout_days_after_buy))
                         self.set_cumulative_rank_up_day(cumulative_rank_up_day)
@@ -219,7 +216,7 @@ class Trading_money_rank:
                     cnt = self.max_record_need_each_stock
                     for key in return_rate_dic:
                         for j_ret in return_rate_dic[key]:
-                            # print(j_ret)
+                            print(j_ret)
                             self.set_cumulative_rank_up_day(j_ret['cumulative_rank_up_day'])
                             self.set_selldout_days_after_buy(j_ret['selldout_days_after_buy'])
                             collect_data_return_rate = 100 * round(j_ret['return_rate'], 3)
