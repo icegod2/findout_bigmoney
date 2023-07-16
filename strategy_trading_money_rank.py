@@ -85,6 +85,8 @@ class Trading_money_rank:
 
     def _check_if_time_to_buy(self, stock_id, stock_name, cumulative_rank_up_day):
         fn = self.data_fn_fmt.format(self.stock_data_dir, stock_id, stock_name)
+
+        print("_check_if_time_to_buy {} {} {}".format(stock_id, stock_name, cumulative_rank_up_day))
         stock_data = pd.read_csv(fn)
         last_trading_money_rank = 0
         for index, row in stock_data.tail(cumulative_rank_up_day + 1).iterrows():
@@ -92,7 +94,7 @@ class Trading_money_rank:
             close_price = row[7]
             trading_money_rank = row[10]
             
-            print(check_date, close_price, trading_money_rank)
+            print(check_date, close_price, last_trading_money_rank, trading_money_rank)
 
             if trading_money_rank == -1:
                 continue
@@ -103,13 +105,14 @@ class Trading_money_rank:
 
             if trading_money_rank > last_trading_money_rank:
                 return 0
+            last_trading_money_rank = trading_money_rank
         return 1
 
 
     def pick_up_stock(self):
         stocklist = pd.read_csv(self.stocklist_fn)
-        inform_use = []
-        for index, row in stocklist.head.iterrows():
+        inform_user = []
+        for index, row in stocklist.iterrows():
             curr_stock_id = int(row['有價證券代號'])
             curr_stock_name = row['有價證券名稱']
             cumulative_rank_up_day = 0
@@ -125,13 +128,12 @@ class Trading_money_rank:
             if len(selldout_days_after_buy) == 0:
                 continue
             selldout_days_after_buy = int(selldout_days_after_buy)
-
-            print(cumulative_rank_up_day, selldout_days_after_buy)
             ret = self._check_if_time_to_buy(curr_stock_id, curr_stock_name, cumulative_rank_up_day)
             if ret == 1:
                 s = "[{} {}][{} {}] buy".format(curr_stock_id, curr_stock_name, cumulative_rank_up_day, selldout_days_after_buy)
-                inform_use.append(s)
-        return inform_use
+                print(s)
+                inform_user.append([curr_stock_id, curr_stock_name])
+        return inform_user
 
 
     def update_buy_criteria(self):

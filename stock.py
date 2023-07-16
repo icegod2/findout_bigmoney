@@ -13,6 +13,8 @@ from strategy_trading_money_rank  import Trading_money_rank
 import datetime as dt
 import time
 
+from notifyUser import NotifyUser
+
 
 
 stocklist_fn = "stocklist.csv"
@@ -97,7 +99,7 @@ def update_stock_data(start=1):
         curr_stock_name = row['有價證券名稱']
         if curr_stock_id >= start:
             get_stock_info(curr_stock_id, curr_stock_name)
-            sleep(randint(2, 5))
+            sleep(randint(10, 20))
 
 def update_one_stock_data(stock_id, start_date_from):
     stocklist = pd.read_csv(stocklist_fn)
@@ -189,12 +191,33 @@ def show_stock_info(stock_id, stock_name):
     plotting.kline(stockdata, filename=plot_fn)
 
 
+def notify_user(buy_list):
+    notify = NotifyUser("smtp.gmail.com", 587, "XXXXXX", "test@gmail.com")
+    notify.add_notify_user_email("test@gmail.com")
+
+    html = """\
+    <html>
+    <body>
+        <p>Hi,<br>
+        Today you can buy<br>
+    """
+
+    for stock in buy_list:
+        html += '<a href="https://tw.stock.yahoo.com/quote/{}.TW">{} {}</a><br>'.format(stock[0], stock[0], stock[1])
+    
+    html += """</p>
+    </body>
+    </html>
+    """
+
+    notify.send_email(html)
+
 
 def main():
     parser = optparse.OptionParser(usage="%prog [-u] [-t]", version="%prog 1.0")
     parser.add_option('--update', dest='type',
                       type='string',
-                      help='update [list| data]')
+                      help='update [list| data | buy_rule]')
 
     parser.add_option('--start_id', dest='start_stock_id',
                       type='int',
@@ -213,10 +236,14 @@ def main():
                       help='which strategy want to use')
     
     (options, args) = parser.parse_args()
-
+    print(options)
     if options.type != None:
         if options.type == "list":
             update_stock_list()
+        elif options.type == "buy_rule":
+            s = Trading_money_rank()
+            s.update_data_start()
+            s.update_buy_criteria()
         elif options.type == "data":
             if options.start_stock_id != None: 
                 update_stock_data(options.start_stock_id)
@@ -232,15 +259,11 @@ def main():
 
     if options.strategy != None:
         if options.strategy == "trading_money_rank":
-            pass
-    
-    s = Trading_money_rank()
-    s.update_data_start()
-    s.update_buy_criteria()
-    # ret = s.pick_up_stock()
-    # print(ret)
-    
-
+            update_stock_data()
+            update_trading_money_rank()
+            s = Trading_money_rank()
+            buy_list = s.pick_up_stock()
+            notify_user(buy_list)
 
 
 
